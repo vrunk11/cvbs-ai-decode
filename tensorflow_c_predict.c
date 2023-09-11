@@ -145,7 +145,7 @@ int main(int argc, char **argv)
    int in_dim_3 = 1;
    
    int out_dim_1 = 242;
-   int out_dim_2 = 910;
+   int out_dim_2 = 792;
    int out_dim_3 = 3;
    
    //model input data size
@@ -187,15 +187,15 @@ int main(int argc, char **argv)
 	
 	 //****** Get input tensor
     TF_Output* Input = malloc(sizeof(TF_Output) * NumInputs);
-    TF_Output t0 = {TF_GraphOperationByName(Graph, "serving_default_conv2d_input"), 0};
+    TF_Output t0 = {TF_GraphOperationByName(Graph, "serving_default_input_1"), 0};
     
     if(t0.oper == NULL)
     {
-        fprintf(stderr,"ERROR: Failed TF_GraphOperationByName serving_default_conv2d_input\n");
+        fprintf(stderr,"ERROR: Failed TF_GraphOperationByName serving_default_input_1\n");
     }
     else
     {
-        fprintf(stderr,"TF_GraphOperationByName serving_default_conv2d_input is OK\n");
+        fprintf(stderr,"TF_GraphOperationByName serving_default_input_1 is OK\n");
     }
     
     Input[0] = t0;
