@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <getopt.h>
 #include "tensorflow/c/c_api.h"
 
 #ifdef _WIN32
@@ -61,7 +62,7 @@ TF_Tensor* load_data_as_tensor(float *tensor_buf,int batch_size,int in_dim1,int 
 }
 
 //scale YUV component and cast to 16 bit
-void process_output_field(float *input_buf,unsigned short *output_buf,int sample_size)
+void process_output_field(float *input_buf,unsigned short *output_buf,int sample_size,int output_mode)
 {
      int i = 0;
 	 int calc = 0;
@@ -77,53 +78,74 @@ void process_output_field(float *input_buf,unsigned short *output_buf,int sample
      while(i < sample_size)
      {
         // TODO : check how to use pointer !!!
-		//Y : clip , cast and scale
-		calc = (((input_buf[i] - 18048)* Yscale) + 4096);
-		if(calc >= 65535)
+		if(output_mode == 0)
 		{
-			output_buf[i] = 65535;
-		}
-		else if(calc <= 0)
-		{
-			output_buf[i] = 0;
+			//Y : clip , cast and scale
+			calc = (((input_buf[i] - 18048)* Yscale) + 4096);
+			if(calc >= 65535)
+			{
+				output_buf[i] = 65535;
+			}
+			else if(calc <= 0)
+			{
+				output_buf[i] = 0;
+			}
+			else
+			{
+				output_buf[i] = calc;
+			}
+			i++;
+			
+			//U : clip , cast and scale
+			calc = (((input_buf[i] - 32767)* Uscale) + 32767);
+			if(calc >= 65535)
+			{
+				output_buf[i] = 65535;
+			}
+			else if(calc <= 0)
+			{
+				output_buf[i] = 0;
+			}
+			else
+			{
+				output_buf[i] = calc;
+			}
+			i++;
+			
+			//V : clip , cast and scale
+			calc = (((input_buf[i] - 32767)* Vscale) + 32767);
+			if(calc >= 65535)
+			{
+				output_buf[i] = 65535;
+			}
+			else if(calc <= 0)
+			{
+				output_buf[i] = 0;
+			}
+			else
+			{
+				output_buf[i] = calc;
+			}
+			i++;
 		}
 		else
 		{
-			output_buf[i] = calc;
+			calc = input_buf[i];//transform float to int
+			
+			if(calc >= 65535)
+			{
+				output_buf[i] = 65535;
+			}
+			else if(calc <= 0)
+			{
+				output_buf[i] = 0;
+			}
+			else
+			{
+				output_buf[i] = calc;
+			}
+			i++;
 		}
-		i++;
-		
-		//U : clip , cast and scale
-		calc = (((input_buf[i] - 32767)* Uscale) + 32767);
-		if(calc >= 65535)
-		{
-			output_buf[i] = 65535;
-		}
-		else if(calc <= 0)
-		{
-			output_buf[i] = 0;
-		}
-		else
-		{
-			output_buf[i] = calc;
-		}
-        i++;
-		
-		//V : clip , cast and scale
-		calc = (((input_buf[i] - 32767)* Vscale) + 32767);
-		if(calc >= 65535)
-		{
-			output_buf[i] = 65535;
-		}
-		else if(calc <= 0)
-		{
-			output_buf[i] = 0;
-		}
-		else
-		{
-			output_buf[i] = calc;
-		}
-        i++;
      }
 }
 
@@ -135,8 +157,36 @@ int main(int argc, char **argv)
 	_setmode(_fileno(stdin), O_BINARY);	
 #endif
    
-   input_data = stdin;//get stdin file
+    input_data = stdin;//get stdin file
    
+	int model_type = 0;// 0 = YUV    1 = YC
+	char *model_path = NULL;
+   
+	//********* Read Args parametter
+	int opt;
+   
+	while ((opt = getopt(argc, argv, "m:b:l:c:o:")) != -1) {
+		switch (opt) {
+		case 'o':
+			if((strcmp(optarg, "yc" ) == 0) || (strcmp(optarg, "YC" ) == 0) || (strcmp(optarg, "Yc" ) == 0) || (strcmp(optarg, "yC" ) == 0))
+			{
+				model_type = 1;
+			}
+			else
+			{
+				model_type = 0;
+			}
+			break;
+		case 'm':
+			model_path = optarg;
+			break;
+		default:
+		    fprintf(stderr,"Error no input option found");
+			break;
+		}
+	}
+   
+   //********* Model & Tensor configuration
    //batch size
    int NumInputs = 1;
    int NumOutputs = NumInputs;
@@ -147,6 +197,11 @@ int main(int argc, char **argv)
    int out_dim_1 = 242;
    int out_dim_2 = 792;
    int out_dim_3 = 3;
+   
+   if(model_type == 1)
+   {
+	   out_dim_3 = 2;
+   }
    
    //model input data size
    int model_in_buf_size = (sizeof(float)*(NumInputs*in_dim_1*in_dim_2*in_dim_3));
@@ -174,7 +229,7 @@ int main(int argc, char **argv)
     const char* tags = "serve"; // default model serving tag;
     
     int ntags = 1;
-    TF_Session* Session = TF_LoadSessionFromSavedModel(SessionOpts, RunOpts, argv[1], &tags, ntags, Graph, NULL, Status);
+    TF_Session* Session = TF_LoadSessionFromSavedModel(SessionOpts, RunOpts, model_path, &tags, ntags, Graph, NULL, Status);
     
     if(TF_GetCode(Status) == TF_OK)
     {
@@ -238,7 +293,7 @@ int main(int argc, char **argv)
            if(isatty(STDOUT_FILENO) == 0)
 	        {
                pred_data = TF_TensorData(*OutputValues);
-               process_output_field(pred_data,output_data,(NumInputs*out_dim_1*out_dim_2*out_dim_3));
+               process_output_field(pred_data,output_data,(NumInputs*out_dim_1*out_dim_2*out_dim_3),model_type);
                fwrite(output_data, out_buf_size, 1, stdout);
                fflush(stdout);
            }
