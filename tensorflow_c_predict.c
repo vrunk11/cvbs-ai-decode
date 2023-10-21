@@ -161,11 +161,12 @@ int main(int argc, char **argv)
    
 	int model_type = 0;// 0 = YUV    1 = YC
 	char *model_path = NULL;
+	int threads = 1;
    
 	//********* Read Args parametter
 	int opt;
    
-	while ((opt = getopt(argc, argv, "m:b:l:c:o:")) != -1) {
+	while ((opt = getopt(argc, argv, "m:o:t:")) != -1) {
 		switch (opt) {
 		case 'o':
 			if((strcmp(optarg, "yc" ) == 0) || (strcmp(optarg, "YC" ) == 0) || (strcmp(optarg, "Yc" ) == 0) || (strcmp(optarg, "yC" ) == 0))
@@ -179,6 +180,17 @@ int main(int argc, char **argv)
 			break;
 		case 'm':
 			model_path = optarg;
+			break;
+		case 't':
+			threads = (int)atoi(optarg);
+			if(threads > 4)
+			{
+				threads = 4;
+			}
+			else if(threads < 1)
+			{
+				threads = 1;
+			}
 			break;
 		default:
 		    fprintf(stderr,"Error no input option found");
@@ -213,88 +225,307 @@ int main(int argc, char **argv)
    //output data size (stdout)
    int out_buf_size = (sizeof(short)*(NumInputs*out_dim_1*out_dim_2*out_dim_3));
    
-   void* tensor_buf = malloc(model_in_buf_size);
+   void* tensor_buf1 = malloc(model_in_buf_size);
+   void* tensor_buf2 = NULL;
+   void* tensor_buf3 = NULL;
+   void* tensor_buf4 = NULL;
    
    void* pred_data = NULL;
-   unsigned short* output_data = malloc(out_buf_size);
+   
+   unsigned short* output_data1 = malloc(out_buf_size);
+   unsigned short* output_data2 = NULL;
+   unsigned short* output_data3 = NULL;
+   unsigned short* output_data4 = NULL;
+   
+	if(threads >= 2)
+	{
+		tensor_buf2 = malloc(model_in_buf_size);
+		output_data2 = malloc(out_buf_size);
+		if(threads >= 3)
+		{
+			tensor_buf3 = malloc(model_in_buf_size);
+			output_data3 = malloc(out_buf_size);
+			if(threads >= 4)
+			{
+				tensor_buf4 = malloc(model_in_buf_size);
+				output_data4 = malloc(out_buf_size);
+			}
+		}
+	}
    
    //********* Read model
-    TF_Graph* Graph = TF_NewGraph();
-    TF_Status* Status = TF_NewStatus();
+    TF_Graph* Graph1 = TF_NewGraph();
+    TF_Graph* Graph2 = TF_NewGraph();
+    TF_Graph* Graph3 = TF_NewGraph();
+    TF_Graph* Graph4 = TF_NewGraph();
     
-    TF_SessionOptions* SessionOpts = TF_NewSessionOptions();
-    TF_Buffer* RunOpts = NULL;
+	TF_Status* Status1 = TF_NewStatus();
+    TF_Status* Status2 = TF_NewStatus();
+    TF_Status* Status3 = TF_NewStatus();
+    TF_Status* Status4 = TF_NewStatus();
+    
+    TF_SessionOptions* SessionOpts1 = TF_NewSessionOptions();
+    TF_SessionOptions* SessionOpts2 = TF_NewSessionOptions();
+    TF_SessionOptions* SessionOpts3 = TF_NewSessionOptions();
+    TF_SessionOptions* SessionOpts4 = TF_NewSessionOptions();
+    
+	TF_Buffer* RunOpts1 = NULL;
+    TF_Buffer* RunOpts2 = NULL;
+    TF_Buffer* RunOpts3 = NULL;
+    TF_Buffer* RunOpts4 = NULL;
     
     //const char* saved_model_dir = "";  // Path of the model
     const char* tags = "serve"; // default model serving tag;
     
     int ntags = 1;
-    TF_Session* Session = TF_LoadSessionFromSavedModel(SessionOpts, RunOpts, model_path, &tags, ntags, Graph, NULL, Status);
-    
-    if(TF_GetCode(Status) == TF_OK)
-    {
-        fprintf(stderr,"TF_LoadSessionFromSavedModel OK\n");
-    }
-    else
-    {
-        fprintf(stderr,"%s",TF_Message(Status));
-    }
+		
+	TF_Session* Session1 = TF_LoadSessionFromSavedModel(SessionOpts1, RunOpts1, model_path, &tags, ntags, Graph1, NULL, Status1);
+	TF_Session* Session2 = TF_LoadSessionFromSavedModel(SessionOpts2, RunOpts2, model_path, &tags, ntags, Graph2, NULL, Status2);
+	TF_Session* Session3 = TF_LoadSessionFromSavedModel(SessionOpts3, RunOpts3, model_path, &tags, ntags, Graph3, NULL, Status3);
+	TF_Session* Session4 = TF_LoadSessionFromSavedModel(SessionOpts4, RunOpts4, model_path, &tags, ntags, Graph4, NULL, Status4);
 	
 	 //****** Get input tensor
-    TF_Output* Input = malloc(sizeof(TF_Output) * NumInputs);
-    TF_Output t0 = {TF_GraphOperationByName(Graph, "serving_default_input_1"), 0};
+    TF_Output* Input1 = malloc(sizeof(TF_Output) * NumInputs);
+    TF_Output* Input2 = malloc(sizeof(TF_Output) * NumInputs);
+    TF_Output* Input3 = malloc(sizeof(TF_Output) * NumInputs);
+    TF_Output* Input4 = malloc(sizeof(TF_Output) * NumInputs);
     
-    if(t0.oper == NULL)
-    {
-        fprintf(stderr,"ERROR: Failed TF_GraphOperationByName serving_default_input_1\n");
-    }
-    else
-    {
-        fprintf(stderr,"TF_GraphOperationByName serving_default_input_1 is OK\n");
-    }
+	TF_Output t1_0 = {TF_GraphOperationByName(Graph1, "serving_default_input_1"), 0};
+	TF_Output t2_0 = {TF_GraphOperationByName(Graph2, "serving_default_input_1"), 0};
+	TF_Output t3_0 = {TF_GraphOperationByName(Graph3, "serving_default_input_1"), 0};
+	TF_Output t4_0 = {TF_GraphOperationByName(Graph4, "serving_default_input_1"), 0};
     
-    Input[0] = t0;
+    Input1[0] = t1_0;
+    Input2[0] = t2_0;
+    Input3[0] = t3_0;
+    Input4[0] = t4_0;
     
     //********* Get Output tensor
-    TF_Output* Output = malloc(sizeof(TF_Output) * NumOutputs);
-    TF_Output t2 = {TF_GraphOperationByName(Graph, "StatefulPartitionedCall"), 0};
+    TF_Output* Output1 = malloc(sizeof(TF_Output) * NumOutputs);
+    TF_Output* Output2 = malloc(sizeof(TF_Output) * NumOutputs);
+    TF_Output* Output3 = malloc(sizeof(TF_Output) * NumOutputs);
+    TF_Output* Output4 = malloc(sizeof(TF_Output) * NumOutputs);
+	
+    TF_Output t1_2 = {TF_GraphOperationByName(Graph1, "StatefulPartitionedCall"), 0};
+    TF_Output t2_2 = {TF_GraphOperationByName(Graph2, "StatefulPartitionedCall"), 0};
+    TF_Output t3_2 = {TF_GraphOperationByName(Graph3, "StatefulPartitionedCall"), 0};
+    TF_Output t4_2 = {TF_GraphOperationByName(Graph4, "StatefulPartitionedCall"), 0};
     
-    if(t2.oper == NULL)
+    Output1[0] = t1_2;
+    Output2[0] = t2_2;
+    Output3[0] = t3_2;
+    Output4[0] = t4_2;
+	
+	//Error T1
+	if(TF_GetCode(Status1) == TF_OK)
     {
-        fprintf(stderr,"ERROR: Failed TF_GraphOperationByName StatefulPartitionedCall\n");
+        fprintf(stderr,"T1 : TF_LoadSessionFromSavedModel OK\n");
     }
     else
     {
-        fprintf(stderr,"TF_GraphOperationByName StatefulPartitionedCall is OK\n");
+        fprintf(stderr,"T1 : %s",TF_Message(Status1));
     }
-    
-    Output[0] = t2;
 	
-	   //********* Allocate data for inputs & outputs
-    TF_Tensor** InputValues  = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumInputs);
-    TF_Tensor** OutputValues = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumOutputs);
+	if(t1_0.oper == NULL)
+    {
+        fprintf(stderr,"T1 ERROR: Failed TF_GraphOperationByName serving_default_input_1\n");
+    }
+    else
+    {
+        fprintf(stderr,"T1 : TF_GraphOperationByName serving_default_input_1 is OK\n");
+    }
+	
+	if(t1_2.oper == NULL)
+    {
+        fprintf(stderr,"T1 ERROR: Failed TF_GraphOperationByName StatefulPartitionedCall\n");
+    }
+    else
+    {
+        fprintf(stderr,"T1 : TF_GraphOperationByName StatefulPartitionedCall is OK\n");
+    }
+	
+	
+	//Error T2
+	if(TF_GetCode(Status2) == TF_OK)
+    {
+        fprintf(stderr,"T2 : TF_LoadSessionFromSavedModel OK\n");
+    }
+    else
+    {
+        fprintf(stderr,"T2 : %s",TF_Message(Status2));
+    }
+	
+	if(t1_0.oper == NULL)
+    {
+        fprintf(stderr,"T2 ERROR: Failed TF_GraphOperationByName serving_default_input_1\n");
+    }
+    else
+    {
+        fprintf(stderr,"T2 : TF_GraphOperationByName serving_default_input_1 is OK\n");
+    }
+	
+	if(t1_2.oper == NULL)
+    {
+        fprintf(stderr,"T2 ERROR: Failed TF_GraphOperationByName StatefulPartitionedCall\n");
+    }
+    else
+    {
+        fprintf(stderr,"T2 : TF_GraphOperationByName StatefulPartitionedCall is OK\n");
+    }
+	
+	
+	//Error T3
+	if(TF_GetCode(Status3) == TF_OK)
+    {
+        fprintf(stderr,"T3 : TF_LoadSessionFromSavedModel OK\n");
+    }
+    else
+    {
+        fprintf(stderr,"T3 : %s",TF_Message(Status3));
+    }
+	
+	if(t1_0.oper == NULL)
+    {
+        fprintf(stderr,"T3 ERROR: Failed TF_GraphOperationByName serving_default_input_1\n");
+    }
+    else
+    {
+        fprintf(stderr,"T3 : TF_GraphOperationByName serving_default_input_1 is OK\n");
+    }
+	
+	if(t1_2.oper == NULL)
+    {
+        fprintf(stderr,"T3 ERROR: Failed TF_GraphOperationByName StatefulPartitionedCall\n");
+    }
+    else
+    {
+        fprintf(stderr,"T3 : TF_GraphOperationByName StatefulPartitionedCall is OK\n");
+    }
+	
+	
+	//Error T4
+	if(TF_GetCode(Status4) == TF_OK)
+    {
+        fprintf(stderr,"T4 : TF_LoadSessionFromSavedModel OK\n");
+    }
+    else
+    {
+        fprintf(stderr,"T4 : %s",TF_Message(Status4));
+    }
+	
+	if(t1_0.oper == NULL)
+    {
+        fprintf(stderr,"T4 ERROR: Failed TF_GraphOperationByName serving_default_input_1\n");
+    }
+    else
+    {
+        fprintf(stderr,"T4 : TF_GraphOperationByName serving_default_input_1 is OK\n");
+    }
+	
+	if(t1_2.oper == NULL)
+    {
+        fprintf(stderr,"T4 ERROR: Failed TF_GraphOperationByName StatefulPartitionedCall\n");
+    }
+    else
+    {
+        fprintf(stderr,"T4 : TF_GraphOperationByName StatefulPartitionedCall is OK\n");
+    }
+	
+	//********* Allocate data for inputs & outputs
+	
+	//thread 1
+    TF_Tensor** InputValues_t1  = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumInputs);
+    TF_Tensor** InputValues_t2  = NULL;
+    TF_Tensor** InputValues_t3  = NULL;
+    TF_Tensor** InputValues_t4  = NULL;
+	
+    TF_Tensor** OutputValues_t1 = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumOutputs);
+    TF_Tensor** OutputValues_t2 = NULL;
+    TF_Tensor** OutputValues_t3 = NULL;
+    TF_Tensor** OutputValues_t4 = NULL;
+	
+	if(threads >= 2)//thread 2
+	{
+		InputValues_t2  = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumInputs);
+		OutputValues_t2 = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumOutputs);
+		if(threads >= 3)//thread 3
+		{
+			InputValues_t3  = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumInputs);
+			OutputValues_t3 = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumOutputs);
+			if(threads >= 4)//thread 4
+			{
+				InputValues_t4  = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumInputs);
+				OutputValues_t4 = (TF_Tensor**)malloc(sizeof(TF_Tensor*)*NumOutputs);
+			}
+		}
+	}
     
 	while(!feof(stdin))
     {
-       //get data
-       InputValues[0] = load_data_as_tensor(tensor_buf,NumInputs,in_dim_1,in_dim_2,in_dim_3);
+		//get data
+		InputValues_t1[0] = load_data_as_tensor(tensor_buf1,NumInputs,in_dim_1,in_dim_2,in_dim_3);
+	   	if(threads >= 2)//thread 2
+		{
+			InputValues_t2[0] = load_data_as_tensor(tensor_buf2,NumInputs,in_dim_1,in_dim_2,in_dim_3);
+			if(threads >= 3)//thread 3
+			{
+				InputValues_t3[0] = load_data_as_tensor(tensor_buf3,NumInputs,in_dim_1,in_dim_2,in_dim_3);
+				if(threads >= 4)//thread 4
+				{
+					InputValues_t4[0] = load_data_as_tensor(tensor_buf4,NumInputs,in_dim_1,in_dim_2,in_dim_3);
+				}
+			}
+		}
 	   
        // Run the model
-       TF_SessionRun(Session, NULL, Input, InputValues, NumInputs, Output, OutputValues, NumOutputs, NULL, 0,NULL , Status);
+       TF_SessionRun(Session1, NULL, Input1, InputValues_t1, NumInputs, Output1, OutputValues_t1, NumOutputs, NULL, 0,NULL , Status1);
+       TF_SessionRun(Session2, NULL, Input2, InputValues_t2, NumInputs, Output2, OutputValues_t2, NumOutputs, NULL, 0,NULL , Status2);
+       TF_SessionRun(Session3, NULL, Input3, InputValues_t3, NumInputs, Output3, OutputValues_t3, NumOutputs, NULL, 0,NULL , Status3);
+       TF_SessionRun(Session4, NULL, Input4, InputValues_t4, NumInputs, Output4, OutputValues_t4, NumOutputs, NULL, 0,NULL , Status4);
        
        //check for error before sending data
-       if(TF_GetCode(Status) != TF_OK)
+       if((TF_GetCode(Status1) != TF_OK) || (TF_GetCode(Status2) != TF_OK) || (TF_GetCode(Status3) != TF_OK) || (TF_GetCode(Status4) != TF_OK))
        {
-           fprintf(stderr,"%s",TF_Message(Status));
-           
+		    fprintf(stderr,"%T1 : s",TF_Message(Status1)); 
+		   	if(threads >= 2)//thread 2
+			{
+				fprintf(stderr,"%T2 : s",TF_Message(Status2)); 
+				if(threads >= 3)//thread 3
+				{
+					fprintf(stderr,"%T3 : s",TF_Message(Status3)); 
+					if(threads >= 4)//thread 4
+					{
+						fprintf(stderr,"%T4 : s",TF_Message(Status4)); 
+					}
+				}
+			}
        }
        else//write data
        {
            if(isatty(STDOUT_FILENO) == 0)
 	        {
-               pred_data = TF_TensorData(*OutputValues);
-               process_output_field(pred_data,output_data,(NumInputs*out_dim_1*out_dim_2*out_dim_3),model_type);
-               fwrite(output_data, out_buf_size, 1, stdout);
+			   //Thread 1
+               pred_data = TF_TensorData(*OutputValues_t1);
+               process_output_field(pred_data,output_data1,(NumInputs*out_dim_1*out_dim_2*out_dim_3),model_type);
+               fwrite(output_data1, out_buf_size, 1, stdout);
+               fflush(stdout);
+			   
+			   //Thread 2
+               pred_data = TF_TensorData(*OutputValues_t2);
+               process_output_field(pred_data,output_data2,(NumInputs*out_dim_1*out_dim_2*out_dim_3),model_type);
+               fwrite(output_data2, out_buf_size, 1, stdout);
+               fflush(stdout);
+			   
+			   //Thread 3
+               pred_data = TF_TensorData(*OutputValues_t3);
+               process_output_field(pred_data,output_data3,(NumInputs*out_dim_1*out_dim_2*out_dim_3),model_type);
+               fwrite(output_data3, out_buf_size, 1, stdout);
+               fflush(stdout);
+			   
+			   //Thread 4
+               pred_data = TF_TensorData(*OutputValues_t4);
+               process_output_field(pred_data,output_data4,(NumInputs*out_dim_1*out_dim_2*out_dim_3),model_type);
+               fwrite(output_data4, out_buf_size, 1, stdout);
                fflush(stdout);
            }
            else
@@ -303,20 +534,57 @@ int main(int argc, char **argv)
                fclose(stdout);
                break;
            }
-		   TF_DeleteTensor(InputValues[0]);
-		   TF_DeleteTensor(OutputValues[0]);
+		   TF_DeleteTensor(InputValues_t1[0]);
+		   TF_DeleteTensor(InputValues_t2[0]);
+		   TF_DeleteTensor(InputValues_t3[0]);
+		   TF_DeleteTensor(InputValues_t4[0]);
+		   
+		   TF_DeleteTensor(OutputValues_t1[0]);
+		   TF_DeleteTensor(OutputValues_t2[0]);
+		   TF_DeleteTensor(OutputValues_t3[0]);
+		   TF_DeleteTensor(OutputValues_t4[0]);
        }
     }
 
     // Free memory
-    TF_DeleteGraph(Graph);
-    TF_DeleteSession(Session, Status);
-    TF_DeleteSessionOptions(SessionOpts);
-    TF_DeleteStatus(Status);
+    TF_DeleteGraph(Graph1);
+    TF_DeleteGraph(Graph2);
+    TF_DeleteGraph(Graph3);
+    TF_DeleteGraph(Graph4);
+	
+    TF_DeleteSession(Session1, Status1);
+    TF_DeleteSession(Session2, Status2);
+    TF_DeleteSession(Session3, Status3);
+    TF_DeleteSession(Session4, Status4);
+	
+    TF_DeleteSessionOptions(SessionOpts1);
+    TF_DeleteSessionOptions(SessionOpts2);
+    TF_DeleteSessionOptions(SessionOpts3);
+    TF_DeleteSessionOptions(SessionOpts4);
+	
+    TF_DeleteStatus(Status1);
+    TF_DeleteStatus(Status2);
+    TF_DeleteStatus(Status3);
+    TF_DeleteStatus(Status4);
     
     //free(pred_data);
-    free(output_data);
-    free(tensor_buf);
+    free(output_data1);
+	free(tensor_buf1);
+	if(threads >= 2)
+	{
+		free(output_data2);
+		free(tensor_buf2);
+		if(threads >= 3)
+		{
+			free(output_data3);
+			free(tensor_buf3);
+			if(threads >= 4)
+			{
+				free(output_data4);
+				free(tensor_buf4);
+			}
+		}
+	}
     
     return 0;
 }
