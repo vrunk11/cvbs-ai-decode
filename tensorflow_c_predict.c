@@ -173,6 +173,10 @@ int main(int argc, char **argv)
 			{
 				model_type = 1;
 			}
+			else if((strcmp(optarg, "tbc" ) == 0) || (strcmp(optarg, "TBC" ) == 0) || (strcmp(optarg, "Tbc" ) == 0) || (strcmp(optarg, "tBc" ) == 0))
+			{
+				model_type = 2;
+			}
 			else
 			{
 				model_type = 0;
@@ -213,6 +217,11 @@ int main(int argc, char **argv)
    if(model_type == 1)
    {
 	   out_dim_3 = 2;
+   }
+   else if(model_type == 2)
+   {
+	   out_dim_2 = 910;
+	   out_dim_3 = 1;
    }
    
    //model input data size
