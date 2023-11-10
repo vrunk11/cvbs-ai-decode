@@ -26,20 +26,20 @@ set lumafile=0
 set chromafile=0
 
 if "%name:~-7%" EQU "_chroma" set name=%name:_chroma=%.tbc"
-if "%name:~-9%" EQU "_aidecode" set name=%name:_aidecode=%.tbc"
+if "%name:~-5%" EQU "_aiyc" set name=%name:_aiyc=%.tbc"
 
-if %ai-chroma% NEQ 0 (set chromafile=%~dp1%name%_aidecode_chroma.tbc) else (set chromafile=set chromafile=%~dp1%name%.tbc)
+if %ai-chroma% NEQ 0 (set chromafile=%~dp1%name%_aiyc_chroma.tbc) else (set chromafile=set chromafile=%~dp1%name%.tbc)
 
-set lumafile=%~dp1%name%_aidecode.tbc
+set lumafile=%~dp1%name%_aiyc.tbc
 
 set audiofile= 
 if exist %~dp1%name%.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.pcm
 if exist %~dp1%name%_cx.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1_cx.pcm
 if exist %~dp1%name%.efm.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.efm.pcm
 
-if exist %~dp1%name%_aidecode.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.pcm
-if exist %~dp1%name%_aidecode_cx.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1_cx.pcm
-if exist %~dp1%name%_aidecode.efm.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.efm.pcm
+if exist %~dp1%name%_aiyc.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.pcm
+if exist %~dp1%name%_aiyc_cx.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1_cx.pcm
+if exist %~dp1%name%_aiyc.efm.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.efm.pcm
 
 if "%decoder%" EQU "ntsc1d" set ntsc-phase-comp=--ntsc-phase-comp
 if "%decoder%" EQU "ntsc2d" set ntsc-phase-comp=--ntsc-phase-comp
