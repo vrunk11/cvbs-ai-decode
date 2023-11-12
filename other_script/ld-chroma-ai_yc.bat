@@ -1,9 +1,9 @@
-@echo off
+@echo on
 chcp 65001
 echo Configuration of the chroma decoder
 echo
 SET decoder=ntsc3d
-SET /p ai-chroma=use AI chroma ? (0) :
+SET /p ai-chroma=use AI chroma ? (1) :
 SET /p luma-nr=luma-nr (0) :
 SET /p chroma-nr=chroma-nr (0) : 
 SET /p chroma-gain=chroma-gain (1.0) : 
@@ -25,14 +25,14 @@ set name=%name:"=%
 set lumafile=0
 set chromafile=0
 
-if "%name:~-7%" EQU "_chroma" set name=%name:_chroma=%.tbc"
-if "%name:~-5%" EQU "_aiyc" set name=%name:_aiyc=%.tbc"
+if "%name:~-7%" EQU "_chroma" set name=%name:_chroma=%
+if "%name:~-5%" EQU "_aiyc" set name=%name:_aiyc=%
 
 if %ai-chroma% NEQ 0 (set chromafile=%~dp1%name%_aiyc_chroma.tbc) else (set chromafile=set chromafile=%~dp1%name%.tbc)
 
 set lumafile=%~dp1%name%_aiyc.tbc
 
-set audiofile= 
+set "audiofile= "
 if exist %~dp1%name%.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.pcm
 if exist %~dp1%name%_cx.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1_cx.pcm
 if exist %~dp1%name%.efm.pcm set audiofile= -f s16le -r 44.1k -ac 2 -i %~dp1%~n1.efm.pcm
@@ -53,6 +53,7 @@ if %ntscphasecomp% EQU 0 set "ntsc-phase-comp= "
 
 set lumafile=%lumafile:"=%
 set chromafile=%chromafile:"=%
+set audiofile=%audiofile:"=%
 
 title Decoding : %~n1   Decoder : %decoder% %ntsc-phase-comp%  Luma-nr : %luma-nr%   Chroma-nr : %chroma-nr%   Chroma-gain : %chroma-gain%   Chroma-phase : %chroma-phase%
 ld-chroma-decoder.exe "%lumafile%" --input-json "%lumafile%.json" -f %decoder% --luma-nr %luma-nr% --chroma-nr 0 --chroma-gain 0 --chroma-phase 1 -p y4m | ffmpeg -y -i - -pix_fmt y8 -c:v ffv1 -coder 1 -context 0 -level 3 -slices 4 -slicecrc 0 -pass 1 "%lumafile%_bw.mkv"
