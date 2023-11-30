@@ -16,7 +16,7 @@ AI Y/C separation + 3D decoding on luma + 2D chroma decoding :
 <img src="demo/demo_frame/Metalica/YC/color/aiyc_3Dluma_color_2525.png" width="" height="">
 
 # How to use
-
+(warning only the Y/C model is viable the other are just prototype for now)
 To use the program you need to have ffmpeg instaled and in the system path.
 then go to "script/windows" or "script/linux" folder depending of your OS
 the folder contain 4 script :
