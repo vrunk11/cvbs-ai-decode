@@ -42,7 +42,7 @@ for using result file with ld-decode tools and fl2K_2 you can use script contain
 
 - ai_decode_ntsc_tbc_file :
   ai time base correction of an NTSC .tbc file to a new .tbc (works on cvbs and chroma)
-  (using the "ntsc_yc" model)
+  (using the "ntsc_tbc" model)
 
 - ai_decode_ntsc_yc_file :
   ai Y/C separation of an NTSC .tbc into 2 .tbc file containing luma and chroma
